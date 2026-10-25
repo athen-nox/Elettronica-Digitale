@@ -133,7 +133,7 @@ end Behavioral;
 
 Schema logico di progettazione:
 
-![RCA](Immagini-relazione/RCA.jpg)
+![RCA](Immagini-relazione/RCA.jpeg)
 
 ## RCA4_Block
 
@@ -142,13 +142,13 @@ Una volta creati i sommatori possiamo configurare una struttura intermedia di su
 
 Schema logico di progettazione:
 
-![RCA_Block](Immagini-relazione/RCA_Block.jpg)
+![RCA_Block](Immagini-relazione/RCA_Block.jpeg)
 ## CSA16
 
 
 Schema logico di progettazione:
 
-![CSA](Immagini-relazione/CSA.jpg)
+![CSA](Immagini-relazione/CSA.jpeg)
 # Simulazione
 
 ## CSA16_tb
@@ -241,7 +241,7 @@ end Behavioral;
 
 Visualizzazione dei segnali utilizzati nel testbench:
 
-![test_segnali](Immagini-relazione/test_segnali.jpg)
+![test_segnali](Immagini-relazione/test_segnali.jpeg)
 
 # Sintesi
 
