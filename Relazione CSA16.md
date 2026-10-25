@@ -139,7 +139,7 @@ Schema logico di progettazione:
 
 ## RCA4_Block
 
-Una volta creati i sommatori possiamo a configurare una struttura intermedia, che è stata aggiunta per semplificare l'implementazione del CSA.
+Una volta creati i sommatori possiamo configurare una struttura intermedia, che è stata aggiunta per semplificare l'implementazione del CSA.
 Questo blocco è composto dai due sommatori RCA4, che ricevono in ingresso la stessa sequenza di bit A e B, e calcolano la somma in modo concorrente, uno con il bit di riporto Cin pari a 0 e l'altro con Cin pari a 1, simulando i possibili outcome del segnale di uscita di riporto Cout del blocco precedente. 
 Sarà proprio questo segnale, una volta calcolato, a selezionare la somma corretta attraverso un multiplexer. La stessa cosa avviene per il carry bit in uscita, che allo stesso modo deve essere selezionato tra i due che vengono generati dai sommatori.
 Nell'implementazione VHDL è stata attribuita a ogni blocco la gestione di 4 bit, e quindi l'Entità riceve in ingresso vettori a 4 bit nelle porte A e B e un bit Carry-in per decidere il risultato corretto, mentre restituisce in uscita il Carry-out, che si propaga nel blocco successivo e il vettore della somma effettiva. All'interno dell'architettura sono stati aggiunti dei segnali di supporto, due per rappresentare i possibili Carry-out e altri due per le somme, in modo tale da poterle leggere al momento opportuno, ovvero quando sarà pronto il Carry-in.
