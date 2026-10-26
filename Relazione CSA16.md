@@ -63,39 +63,13 @@ Cout <= (A and B) or (B and Cin) or (A and Cin);
 ```
   
 
-L'implementazione completa in VHDL è la seguente:
-
-``` VHDL
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-
-entity FullAdder is
-    Port ( A, B  : in  bit;
-           Cin   : in  bit;
-           S     : out bit;
-           Cout  : out bit );
-end FullAdder;
-
-architecture Behavioral of FullAdder is
-begin
-    S    <= (A xor B) xor Cin;
-    Cout <= (A and B) or (B and Cin) or (A and Cin);
-end Behavioral;
-
-```
-  
 
 ## RCA4
 
 L'Entità RCA4 implementa un Ripple-Carry Adder a 4 bit ottenuto connettendo 4 istanze di FullAdder.
-
-
-L'implementazione completa in VHDL è la seguente:
+L'Entità prende in ingresso 4 bit di A e B, insieme al Carry-in di ingresso. In uscita restituisce il Carry-out e la somma a 4 bit.
 
 ``` VHDL
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-
 entity RCA4 is
     Generic ( N : integer := 4 );
     Port ( A, B : in  bit_vector(N-1 downto 0);
@@ -103,7 +77,11 @@ entity RCA4 is
            Cout : out bit;
            S    : out bit_vector(N-1 downto 0) );
 end RCA4;
+```
 
+All'interno dell'architettura sono collegati i Full-Adder, facendo propagare il riporto dal bit meno significativo al più significativo. Viene introdotto un segnale di supporto C per trasportare i bit di carry. L'ultimo segnale di C diventa il Carry-out.
+
+``` VHDL
 architecture Behavioral of RCA4 is
     signal c : bit_vector(N downto 0);
 
@@ -128,8 +106,8 @@ begin
 
     Cout <= c(N);
 end Behavioral;
-
 ```
+
 
 Schema logico di progettazione:
 
@@ -139,7 +117,7 @@ Schema logico di progettazione:
 
 ## RCA4_Block
 
-Una volta creati i sommatori possiamo configurare una struttura intermedia, che è stata aggiunta per semplificare l'implementazione del CSA.
+Una volta creati i sommatori possiamo a configurare una struttura intermedia, che è stata aggiunta per semplificare l'implementazione del CSA.
 Questo blocco è composto dai due sommatori RCA4, che ricevono in ingresso la stessa sequenza di bit A e B, e calcolano la somma in modo concorrente, uno con il bit di riporto Cin pari a 0 e l'altro con Cin pari a 1, simulando i possibili outcome del segnale di uscita di riporto Cout del blocco precedente. 
 Sarà proprio questo segnale, una volta calcolato, a selezionare la somma corretta attraverso un multiplexer. La stessa cosa avviene per il carry bit in uscita, che allo stesso modo deve essere selezionato tra i due che vengono generati dai sommatori.
 Nell'implementazione VHDL è stata attribuita a ogni blocco la gestione di 4 bit, e quindi l'Entità riceve in ingresso vettori a 4 bit nelle porte A e B e un bit Carry-in per decidere il risultato corretto, mentre restituisce in uscita il Carry-out, che si propaga nel blocco successivo e il vettore della somma effettiva. All'interno dell'architettura sono stati aggiunti dei segnali di supporto, due per rappresentare i possibili Carry-out e altri due per le somme, in modo tale da poterle leggere al momento opportuno, ovvero quando sarà pronto il Carry-in.
@@ -183,61 +161,6 @@ Sono mappati quindi due sommatori collegati agli stessi ingressi A e B, ma con C
 
 I multiplexer sono descritti dall'istruzione concorrente VHDL when else.
 
-
-
-L'implementazione completa in VHDL è la seguente:
-
-``` VHDL
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-
-entity RCA4_Block is
-    Generic ( N : integer := 4 );
-    Port ( A, B     : in  bit_vector(N-1 downto 0);
-           Cin_sel  : in  bit;
-           Cout_sel : out bit;
-           S        : out bit_vector(N-1 downto 0) );
-end RCA4_Block;
-
-architecture Behavioral of RCA4_Block is
-    signal res0RCA, res1RCA : bit_vector(N-1 downto 0);
-    signal Cout0, Cout1     : bit;
-    constant c0             : bit := '0';
-    constant c1             : bit := '1';
-
-    component RCA4 is
-        Generic ( N : integer := 4 );
-        Port ( A, B : in  bit_vector(N-1 downto 0);
-               Cin  : in  bit;
-               Cout : out bit;
-               S    : out bit_vector(N-1 downto 0) );
-    end component;
-begin
-    Sommatore1: RCA4
-        generic map ( N => N )
-        port map (
-            A    => A,
-            B    => B,
-            Cin  => c0,
-            S    => res0RCA,
-            Cout => Cout0
-        );
-
-    Sommatore2: RCA4
-        generic map ( N => N )
-        port map (
-            A    => A,
-            B    => B,
-            Cin  => c1,
-            S    => res1RCA,
-            Cout => Cout1
-        );
-
-    S        <= res0RCA when (Cin_sel = '0') else res1RCA;
-    Cout_sel <= Cout0 when (Cin_sel = '0') else Cout1;
-end Behavioral;
-
-```
 
 Schema logico di progettazione:
 
@@ -294,7 +217,169 @@ Ai moduli successivi sono collegati in ordine 4 bit per volta partendo dai meno 
 ```
 
 
-L'implementazione completa in VHDL è la seguente:
+
+Schema logico di progettazione:
+
+![CSA](Immagini-relazione/CSA.jpeg)
+
+
+# Simulazione
+
+## CSA16_tb
+
+Per verificare il corretto funzionamento del circuito, è stato implementato il file di testbench per la simulazione, che prevede la scrittura dell'Entità con il corpo vuoto, senza la dichiarazione di porte dato che non si sta aggiungendo nuovo hardware. 
+
+``` VHDL
+entity CSA16_tb is
+end CSA16_tb;
+```
+
+
+La parte più importante e degna di nota è l'Architettura, che contiene al suo interno la dichiarazione del component CSA16 e le sue porte, i segnali di interconnessione S_A, S_B, S_S, S_Cin, S_Cout e il processo di stimolo "Psim", che definisce alcuni casi di test da verificare. In particolare vengono assegnati ai segnali di ingresso dei vettori a 16 bit, rappresentati in notazione esadecimale, e viene usata la funzione di "wait for 20 ns" per scandire il tempo tra un test e l'altro, e "wait" senza parametri per terminare la simulazione.
+
+``` VHDL
+    PSim: process
+    begin
+        S_A   <= x"0000";
+        S_B   <= x"0000";
+        S_Cin <= '0';
+        wait for 20 ns;
+```
+
+
+
+
+Visualizzazione dei segnali utilizzati nel testbench:
+
+![test_segnali](Immagini-relazione/test_segnali.jpeg)
+
+
+# Conclusioni
+
+In conclusione, il progetto del sommatore Carry-Select a 16 bit ci ha permesso di mettere in pratica i concetti teorici visti a lezione, toccando con mano la progettazione hardware tramite VHDL e l'utilizzo di un software professionale come Vivado.
+
+L'approccio a moduli bottom-up si è rivelato fondamentale. Sviluppare prima i singoli componenti (come il FullAdder e il RCA4), testarli e poi riutilizzarli come blocchi costitutivi per strutture più complesse (RCA4_Block e CSA16) ha reso il codice molto più pulito, leggibile e semplice da controllare. Infine, le simulazioni tramite il testbench hanno confermato la correttezza logica del circuito, dimostrando come il CSA riesca effettivamente a migliorare le prestazioni rispetto al classico sommatore a propagazione di riporto.
+
+
+# Codice completo
+
+## Full-Adder
+
+``` VHDL
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity FullAdder is
+    Port ( A, B  : in  bit;
+           Cin   : in  bit;
+           S     : out bit;
+           Cout  : out bit );
+end FullAdder;
+
+architecture Behavioral of FullAdder is
+begin
+    S    <= (A xor B) xor Cin;
+    Cout <= (A and B) or (B and Cin) or (A and Cin);
+end Behavioral;
+
+```
+
+## RCA4
+
+``` VHDL
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity RCA4 is
+    Generic ( N : integer := 4 );
+    Port ( A, B : in  bit_vector(N-1 downto 0);
+           Cin  : in  bit;
+           Cout : out bit;
+           S    : out bit_vector(N-1 downto 0) );
+end RCA4;
+
+architecture Behavioral of RCA4 is
+    signal c : bit_vector(N downto 0);
+
+    component FullAdder is
+        Port ( A, B  : in  bit;
+               Cin   : in  bit;
+               S     : out bit;
+               Cout  : out bit );
+    end component;
+begin
+    c(0) <= Cin;
+
+    ciclo: for i in 0 to N-1 generate
+        fa: FullAdder port map (
+            A    => A(i),
+            B    => B(i),
+            Cin  => c(i),
+            Cout => c(i+1),
+            S    => S(i)
+        );
+    end generate;
+
+    Cout <= c(N);
+end Behavioral;
+
+```
+
+## RCA4_Block
+
+``` VHDL
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity RCA4_Block is
+    Generic ( N : integer := 4 );
+    Port ( A, B     : in  bit_vector(N-1 downto 0);
+           Cin_sel  : in  bit;
+           Cout_sel : out bit;
+           S        : out bit_vector(N-1 downto 0) );
+end RCA4_Block;
+
+architecture Behavioral of RCA4_Block is
+    signal res0RCA, res1RCA : bit_vector(N-1 downto 0);
+    signal Cout0, Cout1     : bit;
+    constant c0             : bit := '0';
+    constant c1             : bit := '1';
+
+    component RCA4 is
+        Generic ( N : integer := 4 );
+        Port ( A, B : in  bit_vector(N-1 downto 0);
+               Cin  : in  bit;
+               Cout : out bit;
+               S    : out bit_vector(N-1 downto 0) );
+    end component;
+begin
+    Sommatore1: RCA4
+        generic map ( N => N )
+        port map (
+            A    => A,
+            B    => B,
+            Cin  => c0,
+            S    => res0RCA,
+            Cout => Cout0
+        );
+
+    Sommatore2: RCA4
+        generic map ( N => N )
+        port map (
+            A    => A,
+            B    => B,
+            Cin  => c1,
+            S    => res1RCA,
+            Cout => Cout1
+        );
+
+    S        <= res0RCA when (Cin_sel = '0') else res1RCA;
+    Cout_sel <= Cout0 when (Cin_sel = '0') else Cout1;
+end Behavioral;
+
+```
+
+## CSA16
 
 ``` VHDL
 library IEEE;
@@ -353,37 +438,8 @@ end Behavioral;
 
 ```
 
-Schema logico di progettazione:
-
-![CSA](Immagini-relazione/CSA.jpeg)
-
-
-
-# Simulazione
 
 ## CSA16_tb
-
-Per verificare il corretto funzionamento del circuito, è stato implementato il file di testbench per la simulazione, che prevede la scrittura dell'Entità con il corpo vuoto, senza la dichiarazione di porte dato che non si sta aggiungendo nuovo hardware. 
-
-``` VHDL
-entity CSA16_tb is
-end CSA16_tb;
-```
-
-
-La parte più importante e degna di nota è l'Architettura, che contiene al suo interno la dichiarazione del component CSA16 e le sue porte, i segnali di interconnessione S_A, S_B, S_S, S_Cin, S_Cout e il processo di stimolo "Psim", che definisce alcuni casi di test da verificare. In particolare vengono assegnati ai segnali di ingresso dei vettori a 16 bit, rappresentati in notazione esadecimale, e viene usata la funzione di "wait for 20 ns" per scandire il tempo tra un test e l'altro, e "wait" senza parametri per terminare la simulazione.
-
-``` VHDL
-    PSim: process
-    begin
-        S_A   <= x"0000";
-        S_B   <= x"0000";
-        S_Cin <= '0';
-        wait for 20 ns;
-```
-
-
-L’ implementazione completa in VHDL è la seguente:
 
 ``` VHDL
 library IEEE;
@@ -447,13 +503,3 @@ begin
 end Behavioral;
 
 ```
-
-
-Visualizzazione dei segnali utilizzati nel testbench:
-
-![test_segnali](Immagini-relazione/test_segnali.jpeg)
-
-# Sintesi
-
-# Conclusioni
-
